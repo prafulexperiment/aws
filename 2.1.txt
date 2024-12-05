@@ -1,0 +1,64 @@
+Lab 2.1: Exploring AWS CloudShell and the AWS Cloud9 IDE
+
+Task 1: Exploring AWS CloudShell
+AWS CloudShell is a browser-based, pre-authenticated shell that you can launch directly from the AWS Management Console. In this first task, you will connect to CloudShell and explore its capabilities, as shown in this diagram.
+1.	In the AWS Management Console, at the top of the screen, choose the AWS CloudShell icon.
+2.	A new browser tab opens with the AWS CloudShell interface.
+3.	Verify that the AWS CLI is installed.
+a.	At the CloudShell prompt, run the following command: aws --version
+b.	Run the following simple AWS CLI command: aws s3 ls
+c.	A list of the S3 buckets that exist in the account is returned.
+4.	An empty sample bucket was automatically created when you started the lab. The bucket name should appear in the result set.
+5.	From the Actions menu, choose Tabs layout > Split into columns.
+6.	Test the ability to run SDK for Python code.
+a.	Open the context (right-click) menu for the following link, and download the file to your computer:
+7.	 list-buckets.py
+a.	From the Actions menu, choose Files > Upload file, and then choose Select file.
+b.	In the File Upload window, scroll to the list-buckets.py file that you downloaded, choose it, and then choose Open.
+c.	Choose Upload.
+d.	In the terminal on the right side, run the following command: cat list-buckets.py
+8.	The output shows the contents of the file that you uploaded:
+import boto3
+session = boto3.Session()
+s3_client = session.client('s3')
+b = s3_client.list_buckets()
+for item in b['Buckets']:
+    print(item['Name'])
+a.	python3 list-buckets.py
+9.	The name of the S3 bucket is returned.
+10.	Copy a file from CloudShell to an S3 bucket.
+a.	To copy the list-buckets.py file to the bucket, go to the terminal on the left and run the following command (replace <bucket-name> with your actual bucket name):
+11.	aws s3 cp list-buckets.py s3://<bucket-name>
+12.	upload: ./list-buckets.py to s3://<bucket-name>/list-buckets.py
+Task 2: Creating an AWS Cloud9 instance
+In this task, you will create an AWS Cloud9 instance.
+1.	Return to the AWS Management Console browser window.
+2.	In the search bar at the top of the AWS Management Console, enter Cloud9 and choose it.
+3.	Choose Create environment.
+4.	In the Name field, enter MyCloud9.
+5.	In the New EC2 instance section, choose Additional Instance Types.
+6.	From the Additional instance types dropdown list, choose t2.medium.
+7.	In the Network settings section below Connection, choose Secure Shell (SSH). 
+8.	Choose Create.
+9.	Choose the Open link to open your AWS Cloud9 IDE.
+Task 3: Exploring the AWS Cloud9 IDE
+1.	In this task, you will explore some features of the AWS Cloud9 IDE and learn how to use them. You will also interact with Amazon Storage Service (Amazon S3) from the AWS Cloud9 environment. 
+2.	This AWS Cloud9 environment runs on an Amazon Elastic Compute Cloud (Amazon EC2) instance that's now running in your AWS account. 
+3.	Copy a file from Amazon S3 to your local storage in AWS Cloud9 by using the Bash terminal to run an AWS CLI command.
+a.	In the Bash terminal return the name of your bucket by running the following command: aws s3 ls
+b.	Next, download the list-buckets.py file from Amazon S3 to the local storage on AWS Cloud9 by running the following command.
+4.	aws s3 cp s3://<bucket-name>/list-buckets.py .
+5.	Double-click the list-buckets.py file so that it opens in the file editor window. The code displays.At the top of the window, choose the Run icon.
+6.	The command does not run successfully. Instead, a new tab opens in the bottom panel and you see an error message: ModuleNotFoundError: No module named 'boto3'
+7.	sudo pip3 install boto3
+8.	Create a new file and upload it to Amazon S3 by using the AWS Explorer in AWS Cloud9.
+a.	Choose File > New From Template > HTML File.
+b.	Between the <body></body> tags, add the following text: Hello World.
+c.	Choose File > Save and save the file as index.html.
+d.	On the left side of the AWS Cloud9 editor, choose the AWS icon.
+e.	Choose Add regions to AWS Explorer..., in the search box enter us-east-1, and then press Enter.
+f.	Expand the Region—for example, US East (N. Virginia)—expand S3, and then expand your bucket.
+9.	The contents of the bucket are listed.
+a.	Open the context (right-click) menu for the bucket name and choose Upload Files.
+b.	In the dialog box that appears, choose index.html, and then choose Upload.
+10.	The file is uploaded from the AWS Cloud9 instance to the S3 bucket.

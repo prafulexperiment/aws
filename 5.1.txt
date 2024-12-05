@@ -1,0 +1,329 @@
+Lab 5.1: Working with Amazon DynamoDB
+Task 1: Preparing the lab
+5.	Connect to the AWS Cloud9 IDE.
+o	From the Services menu, search for and select Cloud9. You should see an existing IDE named Cloud9 Instance.
+o	In the Cloud9 Instance pane, choose Open IDE.
+6.	Download and extract the files that you need for this lab.
+7.	wget https://aws-tc-largeobjects.s3.us-west-2.amazonaws.com/CUR-TF-200-ACCDEV-2-91558/03-lab-dynamo/code.zip -P /home/ec2-user/environment
+o	You should see that the code.zip file was downloaded to the 
+o	Extract the file by running the following command: 
+8.	unzip code.zip
+9.	Run a script that upgraded the version of Python installed on the Cloud9 instance. To set permissions on the script and then run it, run the following commands:
+10.	chmod +x ./resources/setup.sh && ./resources/setup.sh
+11.	Verify the AWS CLI version and also verify that the SDK for Python is installed.
+o	Confirm that the AWS CLI is now at version 2 by running the aws --version command.
+o	In the AWS Cloud9 Bash terminal (at the bottom of the IDE), run the following command:
+12.	pip show boto3
+Task 2: Creating a DynamoDB table by using the SDK for Python
+1.	In this task, you take on the role of Sofía to create and define the new DynamoDB table.
+2.	Initially, you create this table with only one attribute. Because every DynamoDB table requires a primary key, this attribute becomes the primary key for the table. Each value used as a primary key must be unique. 
+3.	The product_name is the first attribute that you define in the table. The product_name attribute works well because the café's product names should not be duplicated..
+4.	First, verify that no tables exist in the environment by using the AWS Management Console:
+a.	In the top-left corner of the AWS Cloud9 IDE, choose the AWS Cloud9 icon, and choose Go To Your Dashboard.
+b.	In the new tab, open the DynamoDB console by choosing the Services menu and then choosing DynamoDB.
+c.	On the left, expand the DynamoDB navigation pane by choosing the menu icon.
+d.	From the DynamoDB menu, choose Tables.
+e.	Review the Tables pane.
+5.	Notice that no tables are listed.
+6.	Edit the script that will create the table:
+a.	Return to the AWS Cloud9 IDE browser tab.
+b.	In the navigation pane of the AWS Cloud9 IDE, expand the python_3 directory. 
+c.	Open the create_table.py script by double-clicking it.
+d.	Replace the <FMI_1> placeholder with the table name, which is:
+7.	FoodProducts
+a.	In the upper left, choose File > Save to save your changes.
+b.	The following section provides the details that describe the new table. Note the values for TableName, KeySchema, and AttributeDefinitions. The AttributeDefinitions parameter contains only one value, which is product_name. You can add more attributes later at runtime.
+params = {
+       'TableName': '<FMI_1>',
+       'KeySchema': [
+           {'AttributeName': 'product_name', 'KeyType': 'HASH'}
+       ],
+       'AttributeDefinitions': [
+           {'AttributeName': 'product_name', 'AttributeType': 'S'}
+       ],
+       'ProvisionedThroughput': {
+           'ReadCapacityUnits': 1,
+           'WriteCapacityUnits': 1
+       }
+   }
+8.	In the AWS Cloud9 terminal window, go to the python_3 directory, and run the following code:
+9.	cd python_3
+10.	python3 create_table.py
+11.	run the following command to make sure the table was successfully created:
+12.	 aws dynamodb list-tables --region us-east-1
+13.	The output should be similar to the following example:
+{
+  "TableNames": [
+      "FoodProducts"
+  ]
+}
+14.	Return to the browser tab with the DynamoDB console. Use the refresh icon on the far right, choose FoodProducts, and verify that the table has a created state of Active.
+Task 3: Working with DynamoDB data – Understanding DynamoDB condition expressions
+1.	In this task, you continue as Sofía to insert the first record into the table. 
+2.	Review the JavaScript Object Notation (JSON) data that defines the new record.
+a.	In the AWS Cloud9 IDE, expand the resources folder.
+b.	Open the not_an_existing_product.json file by double-clicking it.
+3.	To insert the new record, run the following command. Ensure that you are still in the python_3 folder.
+aws dynamodb put-item \
+--table-name FoodProducts \
+--item file://../resources/not_an_existing_product.json \
+--region us-east-1
+4.	Verify that the new record was added to the table by using the DynamoDB console to complete the following tasks:
+a.	Return to the DynamoDB console and choose the FoodProducts link.
+b.	Choose Explore table items.
+c.	Under Items returned, review the information.
+5.	You should find one record with two attributes: product_name and product_id.
+6.	Add a second record to the table.
+7.	Update the JSON data to create a new record:
+a.	Return to the AWS Cloud9 IDE and load the not_an_existing_product.json file in the text editor.
+b.	Replace the product_name value of <best cake> with best pie
+c.	Do not change the product_id value.
+d.	In the upper left, choose File > Save to save your changes.
+8.	To add the new record, run the following command. Notice that this command is the same AWS CLI command that you used to add the first record.
+aws dynamodb put-item \
+--table-name FoodProducts \
+--item file://../resources/not_an_existing_product.json \
+--region us-east-1
+9.	Again, view the new record in the table by using the console:
+10.	What do you think will happen if you try to insert a duplicate record? 
+11.	Return to the AWS Cloud9 IDE and try re-running the previous AWS CLI command (the up key helps here). Don't make any changes to the JSON record.
+12.	In the DynamoDB console, choose Run again and review the Items returned list. Do you notice any changes?
+13.	Now, try to insert a record with an existing primary key and a different product_id value. 
+14.	Update the JSON record:
+15.	Return to the AWS Cloud9 IDE and the not_an_existing_product.json file.
+16.	Don't change the value of product_name.
+17.	Replace the product_id value of <676767676767> with 3333333333
+18.	In the upper left, choose File > Save to save your changes.
+19.	Run the previous AWS CLI put-item command again:
+aws dynamodb put-item \
+--table-name FoodProducts \
+--item file://../resources/not_an_existing_product.json \
+--region us-east-1
+20.	View the table data in the DynamoDB item explorer by choosing Run.
+21.	Next, test the condition expression. You try to insert another version of the record for best pie. 
+22.	Update the JSON record:
+23.	Return to the AWS Cloud9 IDE and the not_an_existing_product.json file.
+24.	Don't change the value of product_name.
+25.	Replace the product_id value of <3333333333> with 2222222222
+26.	Save your changes.
+27.	In the AWS Cloud9 terminal, run the following AWS CLI put-item command:
+aws dynamodb put-item \
+--table-name FoodProducts \
+--item file://../resources/an_existing_product.json \
+--condition-expression "attribute_not_exists(product_name)" \
+--region us-east-1
+28.	The command should return this output: 
+29.	An error occurred (ConditionalCheckFailedException) when calling the     PutItem operation: The conditional request failed
+Task 4: Adding and modifying a single item by using the SDK
+1.	In this task, you continue as Sofía to add and modify a single item by using the SDK.
+2.	Update the conditional_put.py script.
+a.	In the AWS Cloud9 IDE, go to the python_3 directory.
+b.	Open the conditional_put.py script.
+c.	Replace the <FMI> placeholders as directed in the script. You can also refer to the code analysis in the following step.
+d.	In the upper left, choose File > Save to save your changes.
+This record contains five attributes:
+'''
+    You must replace <FMI_1> with the table name FoodProducts
+    You must replace <FMI_2> with a product name. apple pie
+    You must replace <FMI_3> with a444
+    You must replace <FMI_4> with 595
+    You must replace <FMI_5> with the description: It is amazing!
+    You must replace <FMI_6> with a tag: whole pie
+    You must replace <FMI_7> with a tag: apple
+
+import boto3
+from botocore.exceptions import ClientError
+
+def conditional_put():
+    
+    DDB = boto3.client('dynamodb', region_name='us-east-1')
+    
+    try:
+        response = DDB.put_item(
+            TableName='FoodProducts',
+            Item={
+                'product_name': {
+                    'S': 'apple pie'
+                },
+                'product_id': {
+                    'S': 'a444'
+                },
+                'price_in_cents':{
+                    'N': '595' #number passed in as a string (ie in quotes)
+                },
+                'description':{
+                    'S': "It is amazing!"
+                },
+                'tags':{
+                    'L': [{
+                            'S': 'whole pie'
+                        },{
+                            'S': 'apple'
+                        }]
+                }
+            },
+            ConditionExpression='attribute_not_exists(product_name)'
+        )
+3.	In the AWS Cloud9 terminal, run the file.
+4.	python3 conditional_put.py
+5.	If the command completes successfully, the terminal output should show the message Done. 
+6.	Return to the DynamoDB item explorer, and review the updated data. You should find an entry for apple pie:
+7.	In the AWS Cloud9 IDE, update the conditional_put.py script again. This time, replace the product_id value of <a444> to a555 and save the file.
+8.	Run the script again:
+9.	python3 conditional_put.py
+10.	In the DynamoDB item explorer, review the table data. 
+11.	As you might expect, the item remains unchanged. Because the condition attribute_not_exists(product_name) was included in the put_item operation, the item was not overwritten. 
+12.	In the AWS Cloud9 IDE, update the conditional_put.py script by replacing the product_name value of <apple pie> to cherry pie and saving the file.
+13.	Run the python3 conditional_put.py again.
+14.	In the DynamoDB item explorer, review the data:
+Task 5: Adding multiple items by using the SDK and batch processing
+1.	Because this batch load contains all product records, you must delete all existing records from the table before you run it.
+2.	In the DynamoDB Item explorer, refresh the view of the data by choosing Run
+3.	Delete all records:
+a.	Select the check boxes for all the table records. 
+b.	From the Actions menu, choose Delete item(s). 
+c.	In the pop-up window confirmation box, enter Delete and choose Delete items
+4.	In the AWS Cloud9 IDE, open the resources > test.json file, and review the data.
+5.	This file contains six records that you use to test the batch-load script. Notice that this file contains multiple entries for apple pie on purpose. 
+6.	Now, update the script that performs the batch load.
+7.	Update the test_batch_put.py script:
+a.	In the AWS Cloud9 IDE, open the python_3 > test_batch_put.py script.
+b.	Update the <FMI_1> placeholder with the FoodProducts table name. 
+c.	Replace the <FMI_2> with the product_name primary key name. 
+d.	In the upper left, choose File > Save to save your changes.
+8.	To understand what the script does, review the code:
+a.	The table that will be written to by the script is defined in the table variable on line 11. 
+b.	The with statement that begins on line 12 calls batch_writer(), which opens the connection to the database. 
+c.	Then, the code loops through each record and inserts the new data into the FoodProducts table:
+9.	table = DDB.Table('FoodProducts')
+10.	with table.batch_writer(overwrite_by_pkeys=['product_name']) as batch:
+11.	   for food in food_list:
+12.	       price_in_cents = food['price_in_cents']
+13.	       product_name = food['product_name']
+14.	 
+15.	In the AWS Cloud9 terminal, run the file:
+16.	python3 test_batch_put.py
+17.	After the script completes, the terminal should show the following output:
+18.	Adding food item: {'product_name': 'apple pie', 'price_in_cents': 595}
+19.	In the DynamoDB Item explorer, select the FoodProducts table, and run the scan again.
+20.	With single-item PUT requests (put_item), you can avoid overwriting duplicate records by including a condition. However, with batch inserts, you have two options for handling duplicate keys. You can either allow the overwrite, or you can cause the entire batch process to fail. 
+a.	Review the test_batch_put.py script again. Focus on line 12. 
+b.	The overwrite_by_pkeys=['product_name'] parameter is included in the batch_writer method. This parameter tells DynamoDB to use last write wins if the key already exists.
+c.	Last write wins is why the price_in_cents attribute was updated for apple pie. 
+21.	You must change the script so that it fails when duplicates are included in the batch. You can then review and clean up the data. To implement this feature, you remove the overwrite_by_pkeys parameter from the batch_writer method.
+22.	To prepare for the production data load, go to the browser tab with the DynamoDB console, and delete all records from the table as you did in the previous steps.
+23.	You can fix the overwrite behavior by updating the test_batch_put.py script and preparing to load the production data. 
+a.	In the AWS Cloud9 IDE, open python_3 > test_batch_put.py.
+b.	Update line 12 by changing <with table.batch_writer(overwrite_by_pkeys=['product_name']) as batch> to the following and saving the file:
+24.	with table.batch_writer() as batch:
+25.	Now run the script again:
+26.	python3 test_batch_put.py
+27.	You will notice errors, which is what what you want this time.
+Adding food item: apple pie 595
+Traceback (most recent call last):
+  File "test_batch_put.py", line 27, in <module>
+ batch_put(food_list)
+  File "test_batch_put.py", line 21, in batch_put
+ batch.put_item(Item=formatted_data)
+  File "/usr/local/lib/python3.6/site-packages/boto3/dynamodb/table.py", line 156, in __exit__
+ In the DynamoDB item explorer, scan the table again, and notice that no items have been added at all.
+28.	This is good; you wish to fail hard and fast if there is a problem. In order to load the raw JSON used in the website, you use a new script called batch_put.py.
+29.	It is very similar to the test_batch_put.py script. This script allows for the optional integer special attribute and also maps the names of more fields to the correct DynamoDB attribute types.
+30.	Modify the python_3/batch_put.py script. 
+a.	Replace <FMI> with FoodProducts
+b.	In the upper left, choose File > Save to save your changes.
+31.	Run the script:
+32.	python batch_put.py
+33.	After the script completes, the terminal should show the following output:
+34.	Adding special food item: apple pie slice 595
+35.	Adding food item: chocolate cake slice 595
+36.	In the DynamoDB Item explorer, review the inserted data. You should now see 26 items! (The image below is truncated image for brevity.)
+Task 6: Querying the table by using the SDK
+1.	Now that the data is loaded, Sofía needs a way to retrieve, or query, the product information from the DynamoDB table. 
+2.	The SDK has two operations for retrieving data from a DynamoDB table: scan() and query().
+3.	The scan operation reads all records in the table, and unwanted data can then be filtered out. If only a subset of the table data is needed, the query operation often provides better performance because it reads only a subset of the records in the table or index.
+4.	Edit the script that selects all records from the table:
+a.	In AWS Cloud9 IDE, open python_3 > get_all_items.py.
+5.	Note: Do not use the get_all_items_py file in the resources folder.
+a.	Update the <FMI_1> placeholder with the FoodProducts table name. 
+b.	In the upper left, choose File > Save to save your changes. 
+i.	 response = table.scan()
+ii.	 data = response['Items']
+iii.	 while response.get('LastEvaluatedKey'):
+iv.	    response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+v.	     data.extend(response['Items'])
+vi.	 
+vii.	In the AWS Cloud9 terminal, run the script:
+6.	python3 get_all_items.py
+7.	Update the get_one_item.py script.
+a.	Replace the <FMI_1> with the name of the table's primary key.
+b.	In the upper left, choose File > Save to save your changes.
+8.	 
+9.	Review the code to understand what it does:
+a.	Focus on lines 13 and 14, which define the response variable. The get_item operation requires a TableName and a Key. response = DDB.get_item(TableName='FoodProducts',
+1.	  Key={
+2.	   'product_name': {'S': product}
+3.	   }
+4.	  )
+5.	data = response['Item']
+6.	print (data)
+7.	if __name__ == '__main__':
+8.	  product = "chocolate cake"
+9.	  get_one_item(product)
+10.	In the AWS Cloud9 terminal, run the following command:
+python3 get_one_item.py
+Task 7: Adding a global secondary index to the table
+Sofía knows that searching on a primary key is easy as per her proof of concept. However, in order to search on attributes that are not part of a primary key, she needs to add a Global Secondary Index to the existing FoodProducts table.
+58.	Update the add_gsi.py script.
+o	Replace the <FMI_1> with the KeyType of HASH
+o	In the upper left, choose File > Save to save your changes.
+o	Similarly to the table creation, the line that defines the table variable also updates the table.
+    params = {
+        'TableName': 'FoodProducts',
+        'AttributeDefinitions': [
+            {'AttributeName': 'special', 'AttributeType': 'N'}
+        ],
+        'GlobalSecondaryIndexUpdates': [
+            {
+                'Create': {
+                    'IndexName': 'special_GSI',
+                    'KeySchema': [
+                        {
+                            'AttributeName': 'special',
+                            'KeyType': 'HASH'
+                        }
+                    ],
+                        'Projection': {
+                        'ProjectionType': 'ALL'
+                    },
+                        'ProvisionedThroughput': {
+                        'ReadCapacityUnits': 1,
+                        'WriteCapacityUnits': 1
+                    }
+                }
+            }
+        ]
+    }
+
+    table = DDB.update_table(**params)
+59.	In the AWS Cloud9 terminal, run the following command:
+python3 add_gsi.py
+If the command completes successfully, the terminal output should display the message DONE.
+Note: It can take up to 5 minutes for the index to populate.
+61.	In the DynamoDB console, monitor the status of the index:
+o	Choose Tables.
+o	Choose FoodProducts.
+o	Choose the Indexes tab.
+o	Wait until the Status changes from Creating to Active.
+62.	Update the scan_with_filter.py script.
+o	Change <FMI_1> to special_GSI
+o	Change <FMI_2> to tags
+o	In the upper left, choose File > Save to save your changes.
+ 
+63.	Review the code.
+response = table.scan(
+  IndexName='special_GSI',
+  FilterExpression=Not(Attr('tags').contains('out of stock')))
+64.	Save the file and run it.
+python3 scan_with_filter.py
+The output should be similar to the following:

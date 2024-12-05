@@ -1,0 +1,114 @@
+
+Lab 3.1: Working with Amazon S3
+Task 1: Connecting to the AWS Cloud9 IDE and configuring the environment
+1.	Connect to the AWS Cloud9 IDE.From the Services menu, search for and select Cloud9.
+2.	You should see an existing IDE that's named Cloud9 Instance.Choose Open.
+3.	The AWS Cloud9 IDE loads in a new browser tab.
+4.	Install the AWS SDK for Python.
+5.	sudo pip install boto3
+6.	Download and extract the files that you will need for this lab.
+7.	wget https://aws-tc-largeobjects.s3.us-west-2.amazonaws.com/CUR-TF-200-ACCDEV-2-91558/02-lab-s3/code.zip -P /home/ec2-user/environment
+a.	The code.zip file is downloaded to the AWS Cloud9 instance. The file is listed in the left navigation pane.
+8.	unzip code.zip
+9.	Verify the AWS CLI version 2.
+10.	aws --version
+Task 2: Creating an S3 bucket by using the AWS CLI
+1.	In this task, you will create an S3 bucket to host your website. You will complete this task by using the AWS CLI.
+2.	 In the AWS Cloud9 Bash terminal, run the following command, replacing <bucket-name> with your bucket name.
+3.	For the bucket name, use the following items, separated by dashes (-):
+a.	Your initials in lowercase
+b.	Today's date in the format YYYY-MM-DD
+c.	The word s3site
+4.	For example, Sofía Martínez might name the bucket sm-2022-08-26-s3site.
+5.	aws s3api create-bucket --bucket <bucket-name> --region us-east-1
+6.	The terminal should confirm that the bucket was created by returning output similar to this example:
+7.	{
+8.	  "Location": "/sm-2022-08-26-s3site"
+9.	}
+10.	In the AWS Management Console, choose Services and select S3. You should see that the bucket was created to confirm that the bucket was created,
+11.	The Access column for the bucket indicates that Bucket and objects not public.
+a.	Choose the bucket name and then choose Permissions.
+b.	Notice that Block all public access is turned on.
+c.	Choose Edit, de-select Block all public access.
+d.	Select Block public access to buckets and objects granted through new access control lists (ACLs).
+e.	Select Block public access to buckets and objects granted through any access control lists (ACLs).
+f.	Select Block public and cross-account access to buckets and objects through any public bucket or access point policies.
+g.	Choose Save changes.
+h.	In the confirm settings dialog, type in confirm and choose Confirm.
+Task 3: Setting a bucket policy on the bucket by using the SDK for Python
+1.	Create the policy document.
+a.	In the AWS Cloud9 IDE, in the navigation pane, choose the Cloud9 Instance directory.
+b.	Choose File > New File and then choose File > Save.
+c.	Name the empty file website_security_policy.json and choose Save.
+d.	In the website_security_policy.json file, paste the following code:
+{
+       "Version": "2008-10-17",
+       "Statement": [
+           {
+               "Effect": "Allow",
+               "Principal": "*",
+               "Action": "s3:GetObject",
+               "Resource": [
+                   "arn:aws:s3:::<bucket-name>/*",
+                   "arn:aws:s3:::<bucket-name>"
+               ],
+               "Condition": {
+                   "IpAddress": {
+                       "aws:SourceIp": [
+                           "<ip-address>/32"
+                       ]
+                   }
+               }
+           },
+           {
+               "Sid": "DenyOneObjectIfRequestNotSigned",
+               "Effect": "Deny",
+               "Principal": "*",
+               "Action": "s3:GetObject",
+               "Resource": "arn:aws:s3:::<bucket-name>/report.html",
+               "Condition": {
+                   "StringNotEquals": {
+                       "s3:authtype": "REST-QUERY-STRING"
+                   }
+               }
+           }
+       ]
+}
+2.	In the policy document, replace all three <bucket-name> entries with your actual bucket name.
+3.	Finally, replace <ip-address> with the IP address that is being used to connect your computer to the internet. You can find your IP address by visiting whatismyip.com
+4.	Save the file.
+5.	Apply the bucket policy to your bucket by using the SDK for Python.
+a.	In the navigation pane, expand the python_3 directory and open the permissions.py file (which contains starter code).
+b.	Edit the file by replacing <bucket-name> with the name of your bucket.
+c.	Save the changes.
+d.	Finally, in the terminal, navigate to the python_3 directory and run the following code:
+6.	cd python_3
+7.	python3 permissions.py
+Task 4: Uploading objects to the bucket to create the website
+13.	Run the code in the terminal. You should still be in the python_3 directory.
+14.	Be sure to replace <bucket-name> below with your actual bucket name
+15.	aws s3 cp ../resources/website s3://<bucket-name>/ --recursive --cache-control "max-age=0"
+ 
+Task 5: Testing access to the website
+14.	Load the website in a browser tab.
+o	Return to the browser tab with the Amazon S3 console.
+o	Choose your bucket name, and then choose Objects.
+15.	If the files you just uploaded do not display, choose the refresh icon to view them.
+o	Choose the index.html file.
+o	Copy the Object URL. It will be in the following format. https://<bucket-name>.s3.amazonaws.com/index.html
+ 
+Task 6: Analyzing the website code
+17.	In the AWS Cloud9 IDE, browse to the resources > website directory and open the index.html file.
+o	Notice that this HTML page references a number of CSS files in the head section
+o	Towards the end of the body section, the code references a few JavaScript (.js) files. Some of these JavaScript files define the essential features of the site. One of these files is named config.js another one of them is named pastries.js.
+18.	Open the config.js file.
+o	It contains an object literal that looks like this:
+window.COFFEE_CONFIG = {
+API_GW_BASE_URL_STR: null,
+COGNITO_LOGIN_BASE_URL_STR: null
+};
+19.	Open the pastries.js file. 
+o	Notice the logic defined in the loadAllItems function, that if the API_GW_BASE_URL_STR has a value of null (which it currently does, as you saw in config.js), then this function will print the items contained in the file named all_products.json.
+o	Observe the printItems function details that are defined further down in the code.
+20.	Open the all_products.json file.
+o	Notice that this JSON file contains information about all the products that display on the website.

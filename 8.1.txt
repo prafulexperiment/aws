@@ -1,0 +1,256 @@
+Lab 8.1: Migrating a Web Application to Docker Containers
+Task 1: Preparing the development environment
+5.	Connect to the AWS Cloud9 integrated development environment (IDE).
+o	From the Services menu, search for and select Cloud9.
+6.	Notice the existing IDE, which is named Cloud9 Instance.
+o	For that IDE, choose Open IDE.
+7.	Download and extract the files that you will need for this lab.
+8.	wget https://aws-tc-largeobjects.s3.us-west-2.amazonaws.com/CUR-TF-200-ACCDEV-2-91558/06-lab-containers/code.zip -P /home/ec2-user/environment
+o	Extract the file:
+9.	unzip code.zip
+o	Set permissions on the script so that you can run it, then run it:
+10.	chmod +x ./resources/setup.sh && ./resources/setup.sh
+11.	Verify the version of AWS CLI installed.
+12.	aws --version
+o	Run the following command:
+13.	pip show boto3
+Task 2: Analyzing the existing application infrastructure
+In this task, you will analyze the current application infrastructure.
+10.	Open the existing coffee supplier application in a browser tab.
+o	Return to the browser tab labeled Your environments, and navigate to the EC2 console.
+o	Choose Instances.
+Notice that three instances are running.
+o	One instance is the AWS Cloud9 instance that you used in the previous task.
+o	The other two instances (MysqlServerNode and AppServerNode) support the application that you will containerize in this lab.
+o	Choose the AppServerNode instance, and copy the Public IPv4 address value.
+o	Open a new browser tab and navigate to the IP address.
+The coffee suppliers website displays.
+11.	Test the web application functionality.
+o	Choose List of suppliers and then choose Add a new supplier.
+o	Fill in all of the fields with values. For example:
+▪	Name: Nikki Wolf
+▪	Address: 100 Main Street
+▪	City: Anytown
+▪	State: CA
+▪	Email: nwolf@example.com
+▪	Phone: 4155551212
+o	Choose Submit.
+The All suppliers page displays and includes the record that you submitted.
+o	Choose edit and change the record (for example, modify the phone number).
+o	To save the change, choose Submit.
+Notice that the change was saved in the record.
+cd resources/codebase_partner
+ls -l
+Task 3: Migrating the application to a Docker container
+1.	In this task, you will migrate an application that is installed directly on the guest OS of an Ubuntu Linux EC2 instance to instead run in a Docker container. The Docker container is portable and could run on any OS that has the Docker engine installed.
+2.	For convenience, you will run the container on the same EC2 instance that hosts the AWS Cloud9 IDE that you are using. You will use this IDE to build the Docker image and launch the Docker container.
+3.	Create a working directory for the node application, and move the source code into the new directory.
+a.	In the AWS Cloud9 IDE, to create and navigate to a directory to store your Docker container code, run the following commands:
+4.	mkdir containers
+5.	cd containers
+a.	To create and navigate to a directory named node_app inside of the containers directory, run the following commands:
+6.	mkdir node_app
+7.	cd node_app
+a.	To move the code base, which you copied earlier, into the new node_app directory, run the following command:
+8.	mv ~/environment/resources/codebase_partner ~/environment/containers/node_app
+9.	Create a Dockerfile.
+10.	Note: A Dockerfile is where you provide instructions to Docker to build an image. A Docker image is a template that has instructions to create a container.
+a.	To create a new Dockerfile named Dockerfile in the node_app/codebase_partner directory, run the following command:
+11.	cd ~/environment/containers/node_app/codebase_partner
+12.	touch Dockerfile
+a.	In the left navigation pane, browse to and open the empty Dockerfile that you just created.
+b.	Copy and paste the following code into the Dockerfile:
+a.	FROM node:11-alpine
+b.	RUN mkdir -p /usr/src/app
+c.	WORKDIR /usr/src/app
+d.	COPY . .
+e.	RUN npm install
+f.	EXPOSE 3000
+g.	CMD ["npm", "run", "start"]
+c.	Save the changes.
+13.	Build an image from the Dockerfile.
+a.	In the AWS Cloud9 terminal, run the following command:
+14.	docker build --tag node_app .
+a.	The output is similar to the following:
+15.	 Verify that the Docker image was created.
+a.	To list the Docker images that your Docker client is aware of, run the following command:
+16.	docker images
+a.	The output is similar to the following:
+17.	Create and run a Docker container based on the Docker image.
+a.	To create and run a Docker container from the image, run the following command:
+18.	docker run -d --name node_app_1 -p 3000:3000 node_app
+a.	To view the Docker containers that are currently running on the host, run the following command:
+19.	docker container ls
+20.	Verify that the node application is now running in the container.
+a.	To check that the container is working on the correct port, run the following command:
+21.	curl http://localhost:3000
+a.	The webpage looks similar to the following:
+22.	Adjust the security group of the AWS Cloud9 EC2 instance to allow network traffic on port 3000 from your computer.
+23.	Note: Because you are using the AWS Cloud9 EC2 instance to run the container, you must open TCP port 3000 for inbound traffic.
+a.	Return to the AWS Management Console browser tab, and navigate to the EC2 console.
+b.	Locate and select the aws-cloud9-Cloud9-Instance instance.
+c.	Choose the Security tab, and choose the aws-cloud9-Cloud9-Instance security group hyperlink.
+d.	Choose the Inbound rules tab, and choose Edit inbound rules.
+e.	Choose Add rule and configure the following:
+i.	Type: Custom TCP
+ii.	Port range: 3000
+iii.	Source: My IP
+f.	Choose Save rules.
+24.	Access the web interface of the application, which is now running in a container.
+a.	In the EC2 console, choose Instances and choose the aws-cloud9-Cloud9-Instance instance.
+b.	On the Details tab, copy the Public IPv4 address value.
+c.	Open a new browser tab. Paste the IP address into the address bar, and add :3000 at the end of the address.
+d.	Establish a terminal connection to the container to observe the settings.
+i.	To find the container ID, run the following command:
+25.	docker ps
+i.	To connect your terminal to the container, run the following commands, one at a time. Replace <container-id> with the actual container ID value that you just retrieved:
+26.	docker exec -ti <container-id> sh
+27.	whoami
+28.	Your terminal is now connected to the container as the root user.
+a.	To observe the environment variables that are present in the node user's environment, run the following commands:
+29.	su node
+30.	env
+31.	Notice that the APP_DB_HOST variable is not present.
+a.	To disconnect from the container, run the following commands:
+32.	exit
+33.	exit
+34.	The first exit command makes you the root user again. The second command disconnects you from the container.
+35.	Stop and remove the container that has the database connectivity issue.
+a.	To get the ID of the running container, run the following command:
+36.	docker ps
+37.	Notice the name of the application that is returned in the NAMES column.
+a.	To stop and remove the container, run the following command:
+38.	docker stop node_app_1 && docker rm node_app_1
+a.	To verify that the application is no longer running, run the following curl command:
+39.	curl http://localhost:3000
+40.	The output indicates a failure to connect to the application (Connection refused).
+41.	Launch a new container. This time, you will pass an environment variable to tell the node application the correct location of the database.
+a.	Return to the EC2 console, and copy the Public IPv4 address value of the MysqlServerNode EC2 instance.
+b.	Return to the AWS Cloud9 terminal.
+c.	To run the application in a container and pass an environment variable to specify the database location, run the following command. Replace <ip-address> with the actual public IPv4 address of the MysqlServerNode EC2 instance:
+42.	docker run -d --name node_app_1 -p 3000:3000 -e APP_DB_HOST="<ip-address>" node_app
+43.	Optional: To check the environment variables of the new container, run the docker exec command, which you used previously. The container now has an APP_DB_HOST variable.
+44.	Verify that the database connection is now working.
+a.	Try to access the web application again.
+i.	If you still have the page open, refresh the browser tab. Otherwise, to navigate to the application in a new browser tab, go to http://<cloud9-public-ip>:3000 (replace <cloud9-public-ip> with the actual public IPv4 address of your AWS Cloud9 instance).
+Task 4: Migrating the MySQL database to a Docker container
+1.	In this task, you will work to migrate the MySQL database to a container as well. To accomplish this task, you will dump the latest data that is stored in the database and use that to seed a new MySQL database running in a new Docker container.
+2.	Create a mysqldump file from the data that is currently in the MySQL database.
+a.	Return to the AWS Cloud9 IDE, and close any file tabs that are open in the text editor.
+b.	Choose File > New File and then paste the following code into the new file:
+3.	mysqldump -P 3306 -h  <mysql-host-ip-address> -u nodeapp -p --databases COFFEE > ../../my_sql.sql
+a.	Next, go to the EC2 console and copy the Public IPv4 address value of the MysqlServerNode instance.
+b.	Return to the text file in AWS Cloud9 and replace <mysql-host-ip-address> in the code with the IP address that you copied.
+c.	In the terminal, to ensure that you are in the correct directory, run the following command:
+4.	cd /home/ec2-user/environment/containers/node_app/codebase_partner
+a.	Finally, copy the command that you created in the text editor into the terminal and run the command.
+5.	Your command will look similar to the following example, but your IP address will be different:
+6.	mysqldump -P 3306 -h 100.27.45.2 -u nodeapp -p --databases COFFEE > ../../my_sql.sql
+a.	The mysqldump utility prompts you for a password. Enter the following password:coffee
+7.	If successful, the terminal does not show any output. However, in the left navigation panel, notice that the  file now appears in the containers directory.
+8.	Open the mysqldump file and observe the contents.
+a.	Open the my_sql.sql file in the AWS Cloud9 editor.
+b.	Scroll through the contents of the file.
+i.	Notice that it will create a database named COFFEE and a table named suppliers.
+ii.	Also, because you added a record using the application web interface earlier in this lab, the script inserts that record into the suppliers table.
+c.	Make a small change to one of the values in the file.
+i.	Locate the line that starts with INSERT INTO. It will appear around line 51.
+ii.	Modify the address that you entered. For example, if the address has a street named Main change it to Container. Note: This change will help you later in the lab when you want to confirm that you are connected to the new database running on a container, and not the old database.
+iii.	Choose File > Save to the change.
+9.	In the terminal, to create a directory to store your mysql container code and navigate into the directory, run the following commands:
+10.	cd /home/ec2-user/environment/containers
+11.	mkdir mysql
+12.	cd mysql
+13.	Create a Dockerfile.
+a.	To create a new Dockerfile, run the following command:
+14.	touch Dockerfile
+a.	To move the sqldump file into the new mysql directory, run the following command:
+15.	mv ../my_sql.sql .
+a.	Open the empty Dockerfile (in containers/mysql/) and then copy and paste the following code into the file:
+16.	FROM mysql:8.0.23
+17.	COPY ./my_sql.sql /
+18.	EXPOSE 3306
+a.	Save the changes.
+19.	Attempt to free up some disk space on the AWS Cloud9 EC2 instance by removing unneeded files.
+a.	Run the following command:
+20.	docker rmi -f $(docker image ls -a -q)
+a.	Finally, run the following command:
+21.	sudo docker image prune -f && sudo docker container prune -f
+22.	 
+23.	To build an image from the Dockerfile, run the following command:
+24.	docker build --tag mysql_server .
+25.	Verify that the Docker image was created.
+a.	To list the Docker images that your Docker client is aware of, run the following command:
+26.	docker images
+27.	Create and run a Docker container based on the Docker image.
+a.	To create and run a Docker container from the image, run the following command:
+28.	docker run --name mysql_1 -p 3306:3306 -e MYSQL_ROOT_PASSWORD=rootpw -d mysql_server
+a.	To view the Docker containers that are currently running on the host, run the following command:
+29.	docker container ls
+30.	Two containers are now running. One hosts the node application, and the other hosts the MySQL database.
+31.	Import the data into the MySQL database and define a database user.
+a.	Run the following command:
+32.	docker exec -i mysql_1 mysql -u root -prootpw < my_sql.sql
+33.	Ignore the warning about using a password on the command line interface being insecure.
+a.	To create a database user for the node application to use, run the following command:
+34.	docker exec -i mysql_1 mysql -u root  -prootpw -e "CREATE USER 'nodeapp' IDENTIFIED WITH mysql_native_password BY 'coffee'; GRANT all privileges on *.* to 'nodeapp'@'%';"
+ 
+Task 5: Testing the MySQL container with the node application
+1.	In this task, you will update the node application running in the container to point to the MySQL database running in the container. The following diagram shows the migration that you will accomplish in this task:
+2.	To stop and remove the node application server container, run the following command:
+3.	docker stop node_app_1 && docker rm node_app_1
+4.	Discover the network connectivity information.
+a.	To find the IPv4 address of the mysql_1 container on the network, run the following command:
+5.	docker inspect network bridge
+6.	The following example output shows only a portion of the output:
+i.	"Containers": {
+ii.	    "c349bf43b684ab1224d41eb898ce916c48572af11f1ee69063302c17d83b5e92": {
+iii.	        "Name": "mysql_1",
+iv.	        "EndpointID": "a026ac254a9dd6d89b38cc1590d99b878c9b7173a3c1adbd47302e3c3c26a115",
+v.	        "MacAddress": "02:42:ac:11:00:02",
+vi.	        "IPv4Address": "172.17.0.2/16",
+vii.	        "IPv6Address": ""
+viii.	    }
+ix.	},
+7.	In the example output, the IPv4 address used by the mysql_1 container is 172.17.0.2.
+8.	Start a new node application Docker container.
+a.	In this step, you run the Docker command to start a new container from the node_app Docker image. However, this time you pass the APP_DB_HOST environment variable to the container environment.
+9.	docker run -d --name node_app_1 -p 3000:3000 -e APP_DB_HOST=<ip-address> node_app
+10.	To verify that both containers are running again, run the following command:
+11.	docker ps
+12.	 
+13.	Test the application.
+a.	Open the web application that is running as a container on the AWS Cloud9 instance.
+14.	The address for the web application is: http://<cloud9-public-ip-address>:3000
+Task 6: Adding the Docker images to Amazon ECR
+In this final task in the lab, you will add the Docker images that you created to an Amazon Elastic Container Registry (Amazon ECR) repository.
+ 
+39.	Authorize your Docker client to connect to the Amazon ECR service.
+o	Discover your AWS account ID.
+▪	In the AWS Management Console, in the upper-right corner, choose your user name. Your user name begins with voclab/user.
+▪	Copy the My Account value from the menu. This is your AWS account ID.
+o	Next, return to the AWS Cloud9 terminal.
+o	To authorize your AWS Cloud9 Docker client, run the following command. Replace <account-id> with the actual account ID that you just found:
+aws ecr get-login-password \
+--region us-east-1 | docker login --username AWS \
+--password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
+A message indicates that the login succeeded.
+ 
+40.	To create the repository, run the following command:
+aws ecr create-repository --repository-name node-app
+The response data is in JSON format and includes a repositoryArn value. This is the URI that you would use to reference your image for future deployments.
+The response also includes a registryId, which you will use in a moment.
+ 
+41.	Tag the Docker image.
+In this step, you will tag the image with your unique registryId value to make it easier to manage and keep track of this image.
+o	Run the following command. Replace <registry-id> with your actual registry ID number.
+docker tag node_app:latest <registry-id>.dkr.ecr.us-east-1.amazonaws.com/node-app:latest
+The command does not provide a response.
+o	To verify that the tag was applied, run the following command:
+docker images
+42.	Push the Docker image to the Amazon ECR repository.
+o	To push your image to Amazon ECR, run the following command. Replace <registry-id> with your actual registry ID number:
+docker push <registry-id>.dkr.ecr.us-east-1.amazonaws.com/node-app:latest
+o	The output is similar to the following:
+43.	To confirm that the node-app image is now stored in Amazon ECR, run the following aws ecr list-images command:
+aws ecr list-images --repository-name node-app

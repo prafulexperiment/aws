@@ -1,0 +1,291 @@
+Lab 7.1: Creating Lambda Functions Using the AWS SDK for Python
+Task 1: Configuring the development environment
+5.	Connect to the AWS Cloud9 integrated development environment (IDE).
+a.	From the Services menu, search for and select Cloud9.
+Notice the existing IDE, which is named Cloud9 Instance.
+b.	For that IDE, choose Open.
+The AWS Cloud9 IDE loads in a new browser tab.
+6.	Download and extract the files that you will need for this lab.
+a.	In the same terminal, run the following command:
+b.	wget https://aws-tc-largeobjects.s3.us-west-2.amazonaws.com/CUR-TF-200-ACCDEV-2-91558/05-lab-lambda/code.zip -P /home/ec2-user/environment
+c.	Extract the file:
+d.	unzip code.zip
+7.	 
+8.	Run the script that re-creates the work that you completed in earlier labs into this AWS account.
+a.	To set permissions on the script and then run it, run the following commands:
+b.	chmod +x ./resources/setup.sh && ./resources/setup.sh
+c.	When prompted for an IP address,To verify the SDK for Python is installed, run the following command in the AWS Cloud9 terminal:
+9.	pip show boto3
+10.	Take a moment to see what resources the script created.
+a.	Confirm that an S3 bucket is hosting the café website files:
+i.	In the Your environments browser tab, browse to the Amazon S3 console, and choose the name of the bucket that was created.
+ii.	Choose index.html and copy the Object URL.
+iii.	Load the URL in a new browser tab.
+Confirm that DynamoDB has the menu data stored in a table:
+iv.	Browse to the DynamoDB console.
+v.	Choose Tables and choose the FoodProducts table.
+vi.	Choose Explore table items and confirm that the table is populated with menu data.
+vii.	Choose View table details and then on the Indexes tab, confirm that an index named special_GSI was created.
+b.	Confirm that the ProductsApi REST API was defined in API Gateway:
+i.	Browse to the API Gateway console.
+ii.	Choose the name of the ProductsApi API.
+iii.	The API has a GET method for /products and a GET method for /products/on_offer.
+iv.	Finally, the API has POST and OPTIONS methods for /create_report.
+v.	You can use the TEST buttons for each method to ensure that they are returning the mock data that you used in the previous lab. Each method should return a 200 HTML status code.
+11.	Copy the invoke URL for the API to your clipboard.
+a.	In the API Gateway console, in the left panel, choose Stages and then choose the prod stage.
+b.	Copy the Invoke URL value that displays at the top of the page.
+You will use this value in the next step.
+12.	Update the website's config.js file.
+a.	In the AWS Cloud9 IDE browser tab, open resources/website/config.js.
+b.	On line 2, replace null with the invoke URL value that you copied a moment ago. Also, be sure to surround the URL in double quotation marks.
+c.	The file now looks like the following example, but you will have a different value for <some-value>:
+a.	window.COFFEE_CONFIG = {
+API_GW_BASE_URL_STR: "https://<some-value>.execute-api.us-east-1.amazonaws.com/prod",
+COGNITO_LOGIN_BASE_URL_STR: null
+};
+d.	Verify that /prod appears at the end of the URL with no trailing slash.
+e.	Save the change to the file.
+ 
+13.	Update and then run the update_config.py script.
+a.	Open python_3/update_config.py in the text editor.
+b.	Replace the <FMI_1> placeholder with the name of your S3 bucket.
+Tip: Find the bucket name in the S3 console, or run the following command:
+c.	aws s3 ls
+d.	Notice that this script will upload the config.js file that you just edited to the S3 bucket.
+e.	Save the change to the file.
+f.	To run the script, run the following commands:
+g.	cd ~/environment/python_3
+python update_config.py
+i.	In the Amazon S3 console, choose the name of the bucket that contains your website files.
+ii.	Choose index.html and then copy the Object URL value.
+iii.	Load the object URL in a new browser tab.
+h.	Refresh the browser tab to load the changes.
+The café website displays.
+i.	Observe the Browse Pastries section of the webpage. Notice that only one menu item now displays.
+Task 2: Creating a Lambda function to retrieve data from DynamoDB
+14.	The first Lambda function that you create will respond to any /products GET requests from the website. The function will replace the mock endpoint that you created for the products API resource in the previous lab.
+15.	Observe and edit the Python code that you will use in the Lambda function.
+a.	In the AWS Cloud9 file browser, browse to and open python_3/get_all_products_code.py.
+b.	Replace the <FMI_1> placeholder and the <FMI_2> placeholder with the proper values.
+Save the changes to the file.
+16.	Test the code locally in AWS Cloud9.
+a.	To ensure that you are in the correct folder, run the following command:
+b.	cd ~/environment/python_3
+c.	To run the code locally in the AWS Cloud9 terminal, run the following command:
+d.	python3 get_all_products_code.py
+e.	If the code runs successfully, the first part of the table data is returned in the terminal output, formatted as a JSON document as shown here.
+17.	Modify a setting in the code and test it again.
+a.	In the get_all_products_code.py file, line 12 has the following code:
+b.	if offer_path_str is not None:
+c.	Analysis: If the offer_path_str variable is not found, the condition fails and runs a scan of the table.
+d.	To verify that this logic is working, temporarily reverse this condition. Remove the word not from this line of code, so that it looks like the following:
+e.	if offer_path_str is None:
+f.	Save the change.
+g.	Run the code again:
+h.	python3 get_all_products_code.py
+i.	The output resembles the following example:
+18.	Reverse the change that you made to the code.
+a.	On line 12, add the word not back to the code so that it again reads as the following:
+b.	if offer_path_str is not None:
+19.	Comment out the last line of the code and save the file.
+a.	To comment out the last line of code, use a #. The line should look like the following:
+b.	#print(lambda_handler({}, None))
+c.	Save the change.
+20.	Locate the IAM role that the Lambda function will use, and copy the role Amazon Resource Number (ARN) value.
+a.	Browse to the IAM console, and choose Roles.
+b.	In the search box search for and select the LambdaAccessToDynamoDB role that has been created for you.
+Notice that this role provides read only access to DynamoDB. The policy provides enough access for Lambda to read the data that is stored in DynamoDB.
+c.	Copy the Role ARN value.
+Edit the wrapper code that you will use to create the Lambda function.
+d.	Return to the AWS Cloud9 file browser.
+e.	Browse to and open python_3/get_all_products_wrapper.py.
+f.	On line 5, replace <FMI_1> with the role ARN value that you copied.
+g.	Save the changes to the file.
+21.	Package the code and store it in an S3 bucket.
+a.	A bucket with -s3bucket- in the name was created for you when you started the lab.
+b.	Verify that your AWS Cloud9 terminal is in the python_3 directory.
+c.	cd ~/environment/python_3
+d.	To place a copy of your code in a .zip file, run the following command:
+e.	zip get_all_products_code.zip get_all_products_code.py
+f.	Next, to retrieve the name of your S3 bucket, run the following command:
+g.	aws s3 ls
+h.	Finally, to place the .zip file in the bucket, run the following command. Replace <bucket-name> with the actual bucket name that you retrieved:
+i.	aws s3 cp get_all_products_code.zip  s3://<bucket-name>
+22.	To create the Lambda function, run the following command:
+23.	python3 get_all_products_wrapper.py
+24.	Observe the function that you created and test it.
+a.	Browse to the Lambda console.
+b.	Choose the name of the get_all_products function that you just created.
+c.	In the Code source panel, open (double-click) the get_all_products_code.py file to display the code.
+d.	Choose Test.
+e.	For Event name, enter Products
+f.	Keep all of the other default test event values, and choose Save.
+The test event is saved.
+g.	Choose Test again.
+ 
+25.	Create a new test event that is called onOffer.
+a.	In the Code source panel, open the Test menu (choose the arrow icon), and choose Configure test event.
+b.	Choose Create new event.
+i.	For Event name, enter onOffer
+ii.	In the code editor panel, replace the existing code with the following:
+iii.	{
+    "path": "on_offer"
+}
+c.	Choose Save.
+d.	Choose Test.
+This time, the results only display the items that are on offer and not out of stock.
+e.	Scroll to the bottom of the test results to the function logs. You see the log message running scan on index.
+Task 3: Configuring the REST API to invoke the Lambda function
+1.	. In this task, you will configure the /products and /products/on_offer REST API functions to invoke the get_all_products Lambda function so that the code can be invoked from the café website.
+2.	Test the existing GET /products resource.
+a.	Browse to the API Gateway console.
+b.	Choose the ProductsApi API, and choose the GET method for /products.
+Notice on the right side of the page that the method is still accessing a "Mock Endpoint".
+c.	Choose Test, and then choose Test at the bottom of the page.
+d.	Verify that the Response Body correctly returns the mock data.
+3.	Replace the mock endpoint with the Lambda function.
+a.	At the top of the page. Ensure that the GET method is still selected under /products.
+b.	Choose Integration Request and Edit:
+i.	Integration type: Lambda Function
+ii.	Lambda Region: us-east-1
+iii.	Lambda Function: get_all_products
+iv.	Choose Save
+c.	Choose Save.
+ Notice on the right side of the page that the method is no longer calling a "Mock Endpoint". Instead, it is calling your Lambda function.
+4.	Test the /products GET API call one more time by selecting Test.
+ Re-enable CORS on the /products API resource.
+a.	Choose /products so that it is highlighted.
+b.	Select the GET method.
+c.	Select Default 4XX and Default 5XX under Gateway responses.
+d.	Select GET under Access-Control-Allow-Methods.
+e.	Choose Save.
+5.	Test the /products GET API call one more time.
+a.	Choose the GET method for /products.
+b.	Choose Test, and then choose Test at the bottom of the page.
+c.	Scroll down to the Response Headers section again.
+d.	This time, Access-Control-Allow-Origin is included. The following is an example of the output (your data will have a different value for Root):
+e.	{"Access-Control-Allow-Origin":["*"],"Content-Type":["application/json"],"X-Amzn-Trace-Id":["Root=1-63066fa3-6e4218d81cb85b1dc0b78d05;Sampled=0"]}
+6.	Using the same approach, update the /on_offer GET API method.
+a.	Choose the ProductsApi API, and choose the GET method for /on_offer.
+b.	Choose Integration Request and configure:
+i.	Integration type: Lambda Function
+ii.	Lambda Region: us-east-1
+iii.	Lambda Function: get_all_products
+c.	Choose Save.
+d.	Choose /on_offer so that it is highlighted.
+e.	Choose Enable CORS.
+f.	Select Default 4XX and Default 5XX under Gateway responses.
+g.	Select GET under Access-Control-Allow-Methods.
+h.	Choose Save.
+7.	Test the /on_offer GET API call.
+a.	Choose the GET method for /products/on_offer.
+b.	Choose Test, and then choose Test at the bottom of the page.
+c.	Scroll down to the Response Headers section. Notice that CORS is enabled in the headers.
+d.	Scroll back up to the Response Body section. Do you notice an issue?
+The Lambda function is returning all of the menu item, not just the specials.
+This is because the conditional check for on_offer_str is not working.
+Recall the relevant code:
+e.	offer_path_str = event.get('path')
+if offer_path_str is not None:
+f.	Analysis: You need to set the API logic for /products/on_offer to pass the path to the event object that Lambda uses. The next step explains how to do that.
+8.	Configure the /on_offer integration request details.
+a.	Choose the GET method for /products/on_offer.
+b.	Choose Integration Request.
+c.	Choose Edit. Expand Mapping Templates.
+d.	Choose Add mapping template.
+e.	In the Content-Type box, enter the following text:
+f.	application/json
+g.	Under Generate template choose Method request passthrough.
+h.	Replace the text with the following:
+i.	{
+"path": "$context.resourcePath"
+  }
+j.	This will evaluate to /products/on_offer. For now, the code simply checks for the existence of the variable.
+k.	Choose Save at the bottom of the page.
+9.	 
+10.	Test the GET method for /on_offer again.
+a.	Choose Test, and then choose Test at the bottom of the page.
+b.	Verify that only the on offer items (six items) are returned.
+Excellent! Now that this filter is working, you can deploy the API.
+11.	Deploy the API.
+a.	In the Resources panel, choose the API root /.
+b.	Choose Deploy API.
+c.	For Deployment stage, choose prod, and then choose Deploy.
+Task 4: Creating a Lambda function for report requests in the future
+1.	In this task, you will complete steps that are similar to what you just did. However, this time you will create the Lambda function for the /create_report POST action.
+2.	Observe and test the Python code that you will use in the Lambda function.
+a.	Back in the AWS Cloud9 IDE, browse to and open python_3/create_report_code.py.
+Notice that this code does not do much yet. It simply returns a message. In a later lab, you will implement more useful logic to actually create a report; however, this code will suffice for now.
+b.	Run the following command in the terminal:
+c.	python3 create_report_code.py
+d.	The output returned in the terminal looks like the following:
+e.	{'msg_str': 'Report processing, check your phone shortly'}
+f.	Notice the capitalized "R" in the word Report. The mock data contained a lowercase "r" instead. This difference is how you can know that the website is accessing the Lambda function and not the mock data.
+ 
+3.	Comment out the last line of the code in the create_report_code.py file.
+a.	To comment out the last line of code, use a #. The line should look like the following:
+b.	#print(lambda_handler(None, None))
+c.	Save the change.
+4.	Edit the wrapper code that you will use to create the Lambda function.
+a.	Browse to and open python_3/create_report_wrapper.py.
+b.	On line 5, replace the <FMI_1> placeholder with the LambdaAccessToDynamoDB Role ARN value.
+Tip: You may need to return to the IAM console to copy the Role ARN value.
+c.	Save the changes to the file.
+5.	 
+6.	Package the code and store it in the S3 bucket.
+a.	To place a copy of your code in a .zip file, run the following command:
+b.	zip create_report_code.zip create_report_code.py
+c.	To place the .zip file in the bucket, run the following command. Replace <bucket-name> with the actual bucket name:
+d.	aws s3 cp create_report_code.zip  s3://<bucket-name>
+7.	Finally, to create the Lambda function, run the following command:
+8.	python3 create_report_wrapper.py
+9.	  Observe the create_report function that you created and test it.
+a.	Browse to the Lambda console.
+b.	Choose the name of the create_report function that you just created.
+c.	In the Code source panel, open (double-click) the create_report_code.py file to display the code.
+d.	Choose Test.
+e.	For Event name, enter ReportTest
+f.	Keep all of the other default test event values, and choose Save.
+The test event is saved.
+g.	Choose Test again.
+Task 5: Configuring the REST API to invoke the Lambda function to handle reports
+10.	Test the existing POST method for /create_report.
+a.	Browse to the API Gateway console.
+b.	Choose the ProductsApi API, and choose the POST method for create_report.
+Notice on the right side of the page that the method is still accessing a "Mock Endpoint".
+c.	Choose Test, and then choose Test at the bottom of the page.
+Verify that the Response Body correctly returns the mock data (note the lowercase "r" in the results), as in the following example:
+d.	{
+  "message_str": "report requested, check your phone shortly."
+}
+11.	 
+12.	Replace the mock endpoint with the Lambda function.
+a.	Ensure that the POST method is still selected.
+b.	Choose Integration Request and Edit:
+i.	Integration type: Lambda Function
+ii.	Lambda Region: us-east-1
+iii.	Lambda Function: create_report
+iv.	Choose Save.
+c.	Notice on the right side of the page that the POST method is no longer calling a "Mock Endpoint". Instead, it is calling the Lambda function.
+d.	Test the method again.
+Deploy the API.
+e.	In the Resources panel, choose the API root /.
+f.	Choose Deploy API.
+g.	For Deployment stage, choose prod, and then choose Deploy.
+Task 6: Testing the integration using the café website
+13.	In this final task, you will test both API calls (/products and /products/on_offer) through the website.
+14.	 
+15.	Load the café website.
+a.	Return to the browser tab where you have the café website open, and refresh the page.
+i.	Note: To find the page again, browse to the Amazon S3 console. Choose the bucket name, choose index.html, and copy the Object URL value. Load the URL in a new browser tab.
+b.	The café website displays. Test the menu items filter on the website.
+c.	Scroll down to the Browse Pastries section of the page. By default, only the "on offer" menu items display.
+d.	Choose view all and verify that more menu items are returned.
+If everything displays correctly, that means that your CORS configuration is working properly.
+16.	Edit a menu item price in the DynamoDB table, and verify that the change is reflected on the website.
+a.	Select your favorite "on offer" menu item and note the current price.
+b.	In a different browser tab, go to the DynamoDB console and load the FoodProducts table items.
+c.	To open the menu item's record, choose the product_name  hyperlink for that item.
+d.	Change the price_in_cents value to a different three-digit or four-digit number.
+e.	Save the change.
